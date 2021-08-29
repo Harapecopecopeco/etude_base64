@@ -31,12 +31,6 @@
 5. Base64文字列
 `"QUJDREVGRw=="`
 
-## 変換例(復号化)
-
-変換例（符号化）の逆順
-
-`元データ`
-`BASE64("QUJDREVGRw==")`
 
 
 ## 変換表
@@ -61,15 +55,8 @@
 |15|001111|P||31|011111|f||47|101111|v||63|111111|/|
 
 
-`encode.json`
 
-```json=
-{
-
-}
-```
-
-`decode.json`
+`table.json`
 ```json=
 {
  "110000": "w", "110001": "x", "110101": "1", "110100": "0", 
@@ -92,33 +79,109 @@
 ```
 
 
-## エラーハンドル
+### Code
 
-1. 入力が`[a-zA-Z+/]`以外
-    `Input data type is invaild.`
-2. 
+```python=
+import sys
+import json
 
-## 全般実装手順
+# Initialize
+BINARY_TO_BASE64 = json.loads(open("table.json", "r").read())
+BASE64_TO_BINARY = {v: k for k, v in BINARY_TO_BASE64.items()}
 
-1. 変換表を作成（Pythonの辞書型ベースで書きたいので`base64_table.json`とか？）
-2. Transfomer classを作成
-3. 全般(string to byetarrayなど)で使用するメソッドを定義
-    1. Interface（入出力を受け付ける）
+
+# Define function
+def str2bin(input_data: str):
+    """
+    Args:
+        input_data (str)
+    Return:
+        binary_data (binary)
+    """
+    binary_data = ""
+    for s in input_data:
+        binary_data += format(ord(s), "08b")
+    return binary_data
+
+
+def split(input_data: str, split_number: int, replace:str):
+    """
+    Args:
+        input_data (str):
+        split_number (int):
+        replace woed (str):
+    Returns:
+        split_list (list):
+    """
+    split_list = []
+    split_list = [input_data[i:i + split_number] for i in range(0, len(input_data), split_number)]
+    mergine = (len(input_data) % split_number)
+    if mergine:
+        split_list[-1] = split_list[-1] + (replace * (split_number - mergine))
+    return split_list
+
+
+# Process
+argvs = sys.argv
+input_data = argvs[1]
+print(f"{input_data=}\n")
+# Encode
+print("=========Encoding===========")
+# Step 1 string to binary
+b = f"{str2bin(input_data=input_data)}"
+print(f"binary= {b}")
+# Step 2 split binary and fill 0
+splited = split(input_data=b, split_number=6, replace="0")
+print(f"filled={splited}")
+
+# Step 3 convert binary to Base64 format
+converted = ""
+for string in splited:
+    converted += BINARY_TO_BASE64[string]
+print(f"{converted=}")
+# Step 4 fill blank to `=`
+encoded = ""
+for s in split(input_data=converted, split_number=4, replace="="):
+    encoded += s
+
+# Step 5 plint result
+print(f"{encoded=}\n")
+
+# Decode
+print("=========Decoding======")
+print(f"{encoded=}\n")
+d = ""
+for s in [i for i in encoded if i != "="]:
+    d += BASE64_TO_BINARY[s]
+decode = split(input_data=d, split_number=8, replace="")
+print(f"filled= {decode}")
+result = ""
+for i, d in enumerate(decode):
+    if len(d) != 8:
+        del decode[i]
+    result += chr(int(d, 2))
+print(f"decoded= {result}")
+
+```
 
 ### Usage
 
-```python
-interface = Transfoemer(data="ABCDEF")
-interface.encode()
->> QUJDREVGRw==
+```bash
 
-interface.decode()
->> 
+$python transfomer.py row_data
+input_data='row_data'
+
+=========Encoding===========
+binary= 0111001001101111011101110101111101100100011000010111010001100001
+filled=['011100', '100110', '111101', '110111', '010111', '110110', '010001', '100001', '011101', '000110', '000100']
+converted='cm93X2RhdGE'
+encoded='cm93X2RhdGE='
+
+=========Decoding======
+encoded='cm93X2RhdGE='
+
+filled= ['01110010', '01101111', '01110111', '01011111', '01100100', '01100001', '01110100', '01100001', '00']
+decoded= row_data
+
+
 ```
-
-## Encoder（符号器）実装手順
-
-
-
-
-## Decoder（復号器）実装手順
